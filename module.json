@@ -12,8 +12,12 @@
       "minimum": "10",
       "verified": "13"
     },
+    "scripts": [
+     "scripts/card-to-tile.js"
+    ],
     "esmodules": [
       "scripts/card-to-tile.js"
-    ]
+    ],
+    "manifest": "https://github.com/taewankung/foundry-card-to-tile/raw/main/module.json"
   }
   
