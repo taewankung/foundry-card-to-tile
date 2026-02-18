@@ -29,8 +29,15 @@ function getCardConfigFromDescription(card) {
   return null;
 }
 
+function normalizeAngle(deg) {
+  return deg % 360;
+}
+
 function rotatePoint(px, py, cx, cy, angleDeg) {
-  const rad = angleDeg * Math.PI / 180;
+  const angle = normalizeAngle(angleDeg);
+  let invert = 1
+
+  const rad = invert * angle * Math.PI / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
 
@@ -38,8 +45,8 @@ function rotatePoint(px, py, cx, cy, angleDeg) {
   const dy = py - cy;
 
   return {
-    x: cx + dx * cos - dy * sin,
-    y: cy + dx * sin + dy * cos
+    x: Math.round(cx + dx * cos - dy * sin),
+    y: Math.round(cy + dx * sin + dy * cos)
   };
 }
 
@@ -105,7 +112,7 @@ Hooks.once("ready", () => {
 
     const tileWidth = config?.tile?.width ?? 800;
     const tileHeight = config?.tile?.height ?? 1200;
-    
+
     const [tile] = await canvas.scene.createEmbeddedDocuments("Tile", [{
       texture: {src: card.img},
       x: position.x,
@@ -119,6 +126,9 @@ Hooks.once("ready", () => {
           cardUuid: card.uuid,
           originX: position.x,
           originY: position.y,
+          cardWidth: tileWidth,
+          cardHeight: tileHeight,
+          originRotation: 0
         }
       }
     }]);
@@ -155,19 +165,33 @@ Hooks.once("ready", () => {
 
 });
 Hooks.on("updateTile", async (tile, change) => {
-  if (!("x" in change || "y" in change) || !tile.flags['card-to-tile']) return;
+  if (!("x" in change || "y" in change) || !tile.flags['card-to-tile']){
+    if(!('rotation' in change)) return;
+  }
   const originX = tile.flags['card-to-tile'].originX
   const originY = tile.flags['card-to-tile'].originY
+  const originRotation = tile.flags['card-to-tile'].originRotation
+  // const width = tile.flags['card-to-tile'].cardWidth
+  const width = tile.width
+  
+  // const height = tile.flags['card-to-tile'].cardHeight
+  const height = tile.height
+  
   console.log(originX)
   console.log(originY)
+  console.log(width)
+  console.log(height)
+
   const wallIds = tile.flags["card-to-tile"]?.wallIds;
   if (!Array.isArray(wallIds) || wallIds.length === 0) return;
 
   const dx = (change.x ?? originX) - originX;
   const dy = (change.y ?? originY) - originY;
-  console.log(change)
-  console.log(dy)
-  if (dx === 0 && dy === 0) return;
+
+  if (dx === 0 && dy === 0){ 
+    if(!('rotation' in change))
+    return;
+  }
 
   const updates = wallIds
     .map(id => canvas.scene.walls.get(id))
@@ -183,19 +207,36 @@ Hooks.on("updateTile", async (tile, change) => {
     }));
   if('rotation' in change){
     //TODO: update rotation
+    for(const wall of updates ){
+      const cx = tile.x + width / 2;
+      const cy = tile.y + height / 2;
+      console.log('core x: ', cx)
+      console.log('core y: ', cy)
+      const point1 = rotatePoint(wall.c[0],wall.c[1],cx,cy, change['rotation']-originRotation)
+      const point2 = rotatePoint(wall.c[2],wall.c[3],cx,cy, change['rotation']-originRotation)
+      const rotation_c = [
+        point1.x,
+        point1.y,
+        point2.x,
+        point2.y
+      ]
+      wall.c = rotation_c
+    }
   }
+  console.log(updates)
   if (updates.length > 0) {
     await canvas.scene.updateEmbeddedDocuments("Wall", updates);
     await tile.setFlag("card-to-tile", "originX", tile.x);
     await tile.setFlag("card-to-tile", "originY", tile.y);
-
+    await tile.setFlag("card-to-tile", "originRotation", change['rotation']);
   }
-
-  const walls = buildWallsFromTile(tile);
 
 
 
   await canvas.scene.updateEmbeddedDocuments("Wall", updates);
+  await tile.setFlag("card-to-tile", "originX", tile.x);
+  await tile.setFlag("card-to-tile", "originY", tile.y);
+  await tile.setFlag("card-to-tile", "originRotation", change['rotation']);
 });
 
 Hooks.on("preDeleteTile", async (tile) => {
