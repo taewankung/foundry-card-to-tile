@@ -50,34 +50,6 @@ function rotatePoint(px, py, cx, cy, angleDeg) {
   };
 }
 
-function buildWallsFromTile(tile) {
-  const { x, y, width, height, rotation } = tile;
-  const cx = x + width / 2;
-  const cy = y + height / 2;
-
-  const localWalls = tile.flags.cardWalls.localWalls;
-
-  return localWalls.map(w => {
-    const p1 = rotatePoint(
-      x + w.points[0],
-      y + w.points[1],
-      cx,
-      cy,
-      rotation
-    );
-
-    const p2 = rotatePoint(
-      x + w.points[2],
-      y + w.points[3],
-      cx,
-      cy,
-      rotation
-    );
-
-    return { c: [p1.x, p1.y, p2.x, p2.y] };
-  });
-}
-
 Hooks.once("ready", () => {
   console.log("Card to Tile | Ready");
 
@@ -133,12 +105,7 @@ Hooks.once("ready", () => {
       }
     }]);
 
-
-
-
-    if (!Array.isArray(config?.walls)) {return};
-
-    
+    if (!Array.isArray(config?.walls)) {return};    
     // 3. Create Walls
     const wallData = config.walls.map(w => ({
       c: [
@@ -162,7 +129,6 @@ Hooks.once("ready", () => {
     event.preventDefault();
   });
 
-
 });
 Hooks.on("updateTile", async (tile, change) => {
   if (!("x" in change || "y" in change) || !tile.flags['card-to-tile']){
@@ -176,11 +142,6 @@ Hooks.on("updateTile", async (tile, change) => {
   
   // const height = tile.flags['card-to-tile'].cardHeight
   const height = tile.height
-  
-  console.log(originX)
-  console.log(originY)
-  console.log(width)
-  console.log(height)
 
   const wallIds = tile.flags["card-to-tile"]?.wallIds;
   if (!Array.isArray(wallIds) || wallIds.length === 0) return;
@@ -230,8 +191,6 @@ Hooks.on("updateTile", async (tile, change) => {
     await tile.setFlag("card-to-tile", "originY", tile.y);
     await tile.setFlag("card-to-tile", "originRotation", change['rotation']);
   }
-
-
 
   await canvas.scene.updateEmbeddedDocuments("Wall", updates);
   await tile.setFlag("card-to-tile", "originX", tile.x);
