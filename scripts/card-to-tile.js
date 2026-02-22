@@ -50,6 +50,21 @@ function rotatePoint(px, py, cx, cy, angleDeg) {
   };
 }
 
+function wallDataFromType(type = "wall") {
+  switch (type) {
+    case "door":
+      return { door: 1, ds: 0, sense: 0 };
+    case "secret":
+      return { door: 2, ds: 0, sense: 0 };
+    case "window":
+      return { door: 0, ds: 0,  sight: 10,
+        light: 10, 
+      };
+    default:
+      return { door: 0, ds: 0, sense: 0 };
+  }
+}
+
 Hooks.once("ready", () => {
   console.log("Card to Tile | Ready");
 
@@ -57,7 +72,6 @@ Hooks.once("ready", () => {
   const canvasElem = document.getElementById("board");
 
   canvasElem.addEventListener("drop", async (event) => {
-    event.preventDefault();
 
     let data;
     try {
@@ -117,12 +131,14 @@ Hooks.once("ready", () => {
       move: w.blockMovement ?? CONST.WALL_MOVEMENT_TYPES.NORMAL,
       sight: w.blockSight ?? CONST.WALL_SENSE_TYPES.NORMAL,
       light: CONST.WALL_SENSE_TYPES.NORMAL,
-      sound: CONST.WALL_SENSE_TYPES.NORMAL
+      sound: CONST.WALL_SENSE_TYPES.NORMAL,
+      ...wallDataFromType(w.type)
     }));
 
     const createdWalls = await canvas.scene.createEmbeddedDocuments("Wall", wallData);
     // เก็บ wall ids ลง tile.flags
     await tile.setFlag("card-to-tile", "wallIds", createdWalls.map(w => w.id));
+    event.preventDefault();
   });
 
   canvasElem.addEventListener("dragover", (event) => {
@@ -130,6 +146,7 @@ Hooks.once("ready", () => {
   });
 
 });
+
 Hooks.on("updateTile", async (tile, change) => {
   if (!("x" in change || "y" in change) || !tile.flags['card-to-tile']){
     if(!('rotation' in change)) return;
@@ -157,7 +174,10 @@ Hooks.on("updateTile", async (tile, change) => {
   const updates = wallIds
     .map(id => canvas.scene.walls.get(id))
     .filter(Boolean)
-    .map(wall => ({
+    .map(wall => {
+      console.log(wall)
+      return ({
+      ...wall,
       _id: wall.id,
       c: [
         wall.c[0] + dx,
@@ -165,7 +185,8 @@ Hooks.on("updateTile", async (tile, change) => {
         wall.c[2] + dx,
         wall.c[3] + dy
       ]
-    }));
+    })});
+  console.log('updates', updates)
   if('rotation' in change){
     //TODO: update rotation
     for(const wall of updates ){
@@ -181,17 +202,17 @@ Hooks.on("updateTile", async (tile, change) => {
         point2.x,
         point2.y
       ]
-      wall.c = rotation_c
+      wall.c= rotation_c
     }
   }
-  console.log(updates)
+
   if (updates.length > 0) {
+    console.log('update')
     await canvas.scene.updateEmbeddedDocuments("Wall", updates);
     await tile.setFlag("card-to-tile", "originX", tile.x);
     await tile.setFlag("card-to-tile", "originY", tile.y);
     await tile.setFlag("card-to-tile", "originRotation", change['rotation']);
   }
-
   await canvas.scene.updateEmbeddedDocuments("Wall", updates);
   await tile.setFlag("card-to-tile", "originX", tile.x);
   await tile.setFlag("card-to-tile", "originY", tile.y);
@@ -200,6 +221,7 @@ Hooks.on("updateTile", async (tile, change) => {
 
 Hooks.on("preDeleteTile", async (tile) => {
   const wallIds = tile.flags["card-to-tile"]?.wallIds;
+
   if (!Array.isArray(wallIds) || wallIds.length === 0) return;
 
   await canvas.scene.deleteEmbeddedDocuments("Wall", wallIds);
@@ -269,7 +291,6 @@ class CardWallPreview extends Application {
     img.style.display = "relative";
     img.style.position = "absolute";
     img.style.zIndex = 1;
-    console.log(img.style)
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     // svg.setAttribute("viewBox", `0 0 ${this.config.tile?.height ?? 300}px ${this.config.tile?.width ?? 420}px`);
@@ -308,9 +329,23 @@ class CardWallPreview extends Application {
       this.mode = "edit";
     };
 
-    toolbar.append(drawBtn, editBtn);
-    container.prepend(toolbar);
 
+    const typeSelect = document.createElement("select");
+
+    ["wall", "door", "secret", "window"].forEach(t => {
+      const o = document.createElement("option");
+      o.value = t;
+      o.innerText = t;
+      typeSelect.appendChild(o);
+    });
+    
+    typeSelect.onchange = () => {
+      if (!this.selectedWall) return;
+      this.selectedWall.type = typeSelect.value;
+      this._drawWalls();
+    };
+    toolbar.append(drawBtn, editBtn, typeSelect);
+    container.prepend(toolbar);
     const saveBtn = document.createElement("button");
     saveBtn.innerText = "💾 Save to Card";
     saveBtn.onclick = () => this._exportToCard();
@@ -353,7 +388,12 @@ class CardWallPreview extends Application {
 
   _drawLine(x1, y1, x2, y2, wall) {
     const line = document.createElementNS(this.svg.namespaceURI, "line");
-  
+    const colors = {
+      wall: "red",
+      door: "lime",
+      secret: "purple",
+      window: "cyan"
+    };
     line.setAttribute("x1", x1);
     line.setAttribute("y1", y1);
     line.setAttribute("x2", x2);
@@ -361,7 +401,9 @@ class CardWallPreview extends Application {
   
     line.setAttribute(
       "stroke",
-      wall === this.selectedWall ? "cyan" : "red"
+      wall === this.selectedWall
+        ? "yellow"
+        : (colors[wall.type] ?? "red")
     );
     line.setAttribute("stroke-width", "5");
     line.style.cursor = "pointer";
@@ -453,35 +495,6 @@ ${json}
 }
 
 let cardWallPreviewApp = null;
-async function createTileAndWalls(card, scene, x, y) {
-  const config = extractCardConfig(card);
-
-  const tile = await scene.createEmbeddedDocuments("Tile", [{
-    x,
-    y,
-    width: config.tile.width,
-    height: config.tile.height,
-    img: card.img,
-    flags: { cardWalls: { wallIds: [] } }
-  }]);
-
-  if (!config?.walls?.length) return;
-
-  const walls = config.walls.map(w => ({
-    c: [
-      x + w.points[0],
-      y + w.points[1],
-      x + w.points[2],
-      y + w.points[3]
-    ]
-  }));
-
-  const created = await scene.createEmbeddedDocuments("Wall", walls);
-
-  await tile[0].update({
-    "flags.cardWalls.wallIds": created.map(w => w.id)
-  });
-}
 
 function openCardWallPreview(card) {
   if (!card) return;

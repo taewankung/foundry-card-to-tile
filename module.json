@@ -13,7 +13,6 @@
       "verified": "13"
     },
     "scripts": [
-     "scripts/card-to-tile.js"
     ],
     "esmodules": [
       "scripts/card-to-tile.js"
