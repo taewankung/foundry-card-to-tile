@@ -175,7 +175,6 @@ Hooks.on("updateTile", async (tile, change) => {
     .map(id => canvas.scene.walls.get(id))
     .filter(Boolean)
     .map(wall => {
-      console.log(wall)
       return ({
       ...wall,
       _id: wall.id,
@@ -186,14 +185,11 @@ Hooks.on("updateTile", async (tile, change) => {
         wall.c[3] + dy
       ]
     })});
-  console.log('updates', updates)
   if('rotation' in change){
     //TODO: update rotation
     for(const wall of updates ){
       const cx = tile.x + width / 2;
       const cy = tile.y + height / 2;
-      console.log('core x: ', cx)
-      console.log('core y: ', cy)
       const point1 = rotatePoint(wall.c[0],wall.c[1],cx,cy, change['rotation']-originRotation)
       const point2 = rotatePoint(wall.c[2],wall.c[3],cx,cy, change['rotation']-originRotation)
       const rotation_c = [
@@ -207,7 +203,6 @@ Hooks.on("updateTile", async (tile, change) => {
   }
 
   if (updates.length > 0) {
-    console.log('update')
     await canvas.scene.updateEmbeddedDocuments("Wall", updates);
     await tile.setFlag("card-to-tile", "originX", tile.x);
     await tile.setFlag("card-to-tile", "originY", tile.y);
@@ -247,7 +242,6 @@ Hooks.on("renderCardConfig", (app, html) => {
   btn.innerHTML = `<i class="fas fa-draw-polygon wall-card"></i> Wall Preview`;
 
   btn.addEventListener("click", () => {
-    console.log(app)
     openCardWallPreview(app.document);
   });
 
@@ -283,7 +277,6 @@ class CardWallPreview extends Application {
     container.style.height = this.config.tile?.height? `${this.config.tile?.height}px`: '520px';
     container.style.minWidth = "420px";
     container.style.minHeight = "520px";
-    console.log(this.config)
     const img = document.createElement("img");
     img.src = this.card.img;
     img.style.width = this.config.tile?.width? `${this.config.tile?.width}px` : '420px';
@@ -342,7 +335,6 @@ class CardWallPreview extends Application {
     
     typeSelect.onchange = () => {
       this.typeWall = typeSelect.value
-      console.log('?????',this.typeWall)
       if (!this.selectedWall) return;
       this.selectedWall.type = typeSelect.value;
       this._drawWalls();
@@ -379,7 +371,6 @@ class CardWallPreview extends Application {
 
   _drawWalls() {
     this.svg.innerHTML = "";
-    console.log(this.config)
     for (const wall of this.config.walls) {
       const [x1, y1, x2, y2] = wall.points;
 

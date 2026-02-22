@@ -2,7 +2,7 @@
   "id": "card-to-tile",
     "title": "Card to Tile",
     "description": "Drag a card from a deck and drop it into the scene as a tile",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "authors": [
       {
         "name": "Returner X"
@@ -17,6 +17,6 @@
     "esmodules": [
       "scripts/card-to-tile.js"
     ],
-    "manifest": "https://github.com/taewankung/foundry-card-to-tile/raw/release/1.0.3/module.json"
+    "manifest": "https://github.com/taewankung/foundry-card-to-tile/raw/release/1.0.4/module.json"
   }
   
