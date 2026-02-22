@@ -57,7 +57,7 @@ function wallDataFromType(type = "wall") {
     case "secret":
       return { door: 2, ds: 0, sense: 0 };
     case "window":
-      return { door: 0, ds: 0,  sight: 10,
+      return { door: 1, ds: 0,  sight: 10,
         light: 10, 
       };
     default:
@@ -264,6 +264,7 @@ class CardWallPreview extends Application {
     this.drawingWall = null;
     this.selectedWall = null;
     this.mode = "edit"; // edit | draw  
+    this.typeWall = 'wall'
   }
 
   static get defaultOptions() {
@@ -340,6 +341,8 @@ class CardWallPreview extends Application {
     });
     
     typeSelect.onchange = () => {
+      this.typeWall = typeSelect.value
+      console.log('?????',this.typeWall)
       if (!this.selectedWall) return;
       this.selectedWall.type = typeSelect.value;
       this._drawWalls();
@@ -485,7 +488,8 @@ ${json}
         this.drawingWall.y,
         x,
         y
-      ]
+      ],
+      type: this.typeWall
     });
   
     this.drawingWall = null;
