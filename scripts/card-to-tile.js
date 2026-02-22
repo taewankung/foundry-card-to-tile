@@ -256,8 +256,8 @@ class CardWallPreview extends Application {
  async _renderInner() {
  const container = document.createElement("div");
     container.style.position = "relative";
-    container.style.width = "100%";
-    container.style.height = "100%";
+    container.style.width =this.config.tile?.width? `${this.config.tile?.width}px` : '420px';
+    container.style.height = this.config.tile?.height? `${this.config.tile?.height}px`: '520px';
     container.style.minWidth = "420px";
     container.style.minHeight = "520px";
     console.log(this.config)
